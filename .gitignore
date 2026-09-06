@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+post_mortem.json
+*.json
+venv/
+.vscode/
