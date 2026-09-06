@@ -3,95 +3,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SRE Agent — Incident Dashboard</title>
+    <title>SRE Agent — Incident Command Center</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; }
-        .header { background: #161b22; padding: 20px 40px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; }
-        .header h1 { font-size: 20px; color: #58a6ff; }
-        .status-dot { width: 10px; height: 10px; background: #3fb950; border-radius: 50%; display: inline-block; margin-right: 8px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .container { padding: 30px 40px; }
-        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 30px; }
-        .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; }
-        .stat-card .label { font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; }
-        .stat-card .value { font-size: 32px; font-weight: bold; margin-top: 8px; }
-        .p1 { color: #f85149; }
-        .p2 { color: #d29922; }
-        .p3 { color: #3fb950; }
-        .blue { color: #58a6ff; }
-        .section-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #e6edf3; }
-        .incident-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 12px; }
-        .incident-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .severity-badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0e1a; color: #e6edf3; }
+        
+        .header { 
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+            padding: 20px 40px; 
+            border-bottom: 1px solid #30363d;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .header-left h1 { font-size: 22px; color: #58a6ff; font-weight: 700; }
+        .header-left p { font-size: 12px; color: #8b949e; margin-top: 3px; }
+        .header-right { display: flex; align-items: center; gap: 24px; }
+        .status-indicator { display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 8px; height: 8px; background: #3fb950; border-radius: 50%; animation: pulse 2s infinite; box-shadow: 0 0 8px #3fb950; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.2)} }
+        .last-run { font-size: 12px; color: #8b949e; }
+
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 16px; padding: 24px 40px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #161b22, #1c2333);
+            border: 1px solid #30363d; border-radius: 12px; padding: 20px;
+            position: relative; overflow: hidden;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-2px); border-color: #58a6ff; }
+        .stat-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            border-radius: 12px 12px 0 0;
+        }
+        .stat-card.blue::before { background: #58a6ff; }
+        .stat-card.red::before { background: #f85149; }
+        .stat-card.green::before { background: #3fb950; }
+        .stat-card.yellow::before { background: #d29922; }
+        .stat-label { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 1.5px; }
+        .stat-value { font-size: 36px; font-weight: 700; margin-top: 8px; }
+        .stat-value.blue { color: #58a6ff; }
+        .stat-value.red { color: #f85149; }
+        .stat-value.green { color: #3fb950; }
+        .stat-value.yellow { color: #d29922; }
+        .stat-icon { position: absolute; right: 16px; top: 16px; font-size: 28px; opacity: 0.15; }
+
+        .controls { display: flex; gap: 12px; padding: 20px 40px; align-items: center; flex-wrap: wrap; }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+        .btn-primary { background: linear-gradient(135deg, #238636, #2ea043); color: white; box-shadow: 0 2px 8px rgba(35,134,54,0.4); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(35,134,54,0.6); }
+        .btn-secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
+        .btn-secondary:hover { background: #30363d; }
+        .btn-danger { background: linear-gradient(135deg, #da3633, #f85149); color: white; }
+
+        .main-content { padding: 0 40px 40px; display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+
+        .inject-form {
+            background: linear-gradient(135deg, #161b22, #1c2333);
+            border: 1px solid #30363d; border-radius: 12px; padding: 20px; margin: 0 40px 20px;
+        }
+        .inject-title { font-size: 14px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        .inject-grid { display: grid; grid-template-columns: 2fr 3fr 2fr 1.5fr auto; gap: 10px; align-items: end; }
+        input, select { 
+            background: #0d1117; border: 1px solid #30363d; color: #e6edf3; 
+            padding: 9px 12px; border-radius: 8px; font-size: 13px; width: 100%;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus { outline: none; border-color: #58a6ff; }
+        .input-label { font-size: 11px; color: #8b949e; margin-bottom: 4px; }
+
+        .section-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        
+        .incident-card {
+            background: linear-gradient(135deg, #161b22, #1c2333);
+            border: 1px solid #30363d; border-radius: 12px; padding: 20px; margin-bottom: 12px;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .incident-card:hover { border-color: #58a6ff40; transform: translateX(2px); }
+        .incident-card.p0 { border-left: 4px solid #f85149; }
+        .incident-card.p1 { border-left: 4px solid #f85149; }
+        .incident-card.p2 { border-left: 4px solid #d29922; }
+        .incident-card.p3 { border-left: 4px solid #3fb950; }
+
+        .incident-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .service-name { font-size: 18px; font-weight: 700; }
+        .badges { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        
+        .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .badge-p0 { background: #3d1a1a; color: #f85149; border: 1px solid #f85149; }
         .badge-p1 { background: #3d1a1a; color: #f85149; border: 1px solid #f85149; }
         .badge-p2 { background: #2d2208; color: #d29922; border: 1px solid #d29922; }
         .badge-p3 { background: #0d2a0d; color: #3fb950; border: 1px solid #3fb950; }
-        .service-name { font-size: 18px; font-weight: 600; }
-        .incident-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
-        .field { background: #0d1117; border-radius: 6px; padding: 12px; }
-        .field .field-label { font-size: 11px; color: #8b949e; text-transform: uppercase; margin-bottom: 4px; }
-        .field .field-value { font-size: 13px; color: #e6edf3; }
-        .hitl-blocked { background: #3d1a1a; border: 1px solid #f85149; border-radius: 6px; padding: 12px; margin-top: 12px; }
-        .hitl-safe { background: #0d2a0d; border: 1px solid #3fb950; border-radius: 6px; padding: 12px; margin-top: 12px; }
-        .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; }
-        .btn-primary { background: #238636; color: white; }
-        .btn-primary:hover { background: #2ea043; }
-        .btn-secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; margin-left: 10px; }
-        .controls { display: flex; align-items: center; margin-bottom: 24px; gap: 12px; }
-        .loading { text-align: center; padding: 60px; color: #8b949e; }
-        .audit-log { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-top: 24px; }
-        .log-entry { padding: 8px 0; border-bottom: 1px solid #21262d; font-size: 12px; font-family: monospace; color: #8b949e; }
+        .badge-info { background: #1c2333; color: #8b949e; border: 1px solid #30363d; }
+        .badge-warn { background: #2d2208; color: #d29922; border: 1px solid #d29922; }
+        .badge-escalated { background: #3d1a1a; color: #f85149; border: 1px solid #f85149; animation: pulse 2s infinite; }
+
+        .incident-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .field { background: #0d1117; border-radius: 8px; padding: 12px; border: 1px solid #21262d; }
+        .field-label { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .field-value { font-size: 13px; color: #e6edf3; line-height: 1.4; }
+
+        .hitl-blocked { 
+            background: linear-gradient(135deg, #3d1a1a, #2d1010);
+            border: 1px solid #f85149; border-radius: 8px; padding: 14px;
+        }
+        .hitl-safe { 
+            background: linear-gradient(135deg, #0d2a0d, #081a08);
+            border: 1px solid #3fb950; border-radius: 8px; padding: 14px;
+        }
+        .hitl-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+        .hitl-action { font-size: 12px; margin-top: 4px; opacity: 0.8; }
+
+        .sidebar { display: flex; flex-direction: column; gap: 16px; }
+        
+        .audit-card {
+            background: linear-gradient(135deg, #161b22, #1c2333);
+            border: 1px solid #30363d; border-radius: 12px; padding: 20px;
+            max-height: 320px; overflow-y: auto;
+        }
+        .log-entry { 
+            padding: 8px 0; border-bottom: 1px solid #21262d; 
+            font-size: 11px; font-family: 'Courier New', monospace;
+        }
         .log-entry:last-child { border-bottom: none; }
-        .log-entry .log-time { color: #58a6ff; margin-right: 12px; }
-        .log-entry .log-event { color: #3fb950; margin-right: 12px; }
-        .log-entry .log-blocked { color: #f85149; }
-        .postmortem { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-top: 24px; }
-        .rec-item { padding: 8px 0; border-bottom: 1px solid #21262d; font-size: 13px; }
-        .rec-item:before { content: "→ "; color: #58a6ff; }
-        .custom-form { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
-        .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
-        input, select { background: #0d1117; border: 1px solid #30363d; color: #e6edf3; padding: 8px 12px; border-radius: 6px; font-size: 13px; width: 100%; }
-        .tag { display: inline-block; background: #21262d; border-radius: 4px; padding: 2px 8px; font-size: 11px; margin-right: 4px; }
+        .log-time { color: #58a6ff; }
+        .log-blocked { color: #f85149; font-weight: 700; }
+        .log-auto { color: #3fb950; font-weight: 700; }
+        .log-service { color: #e6edf3; }
+
+        .postmortem-card {
+            background: linear-gradient(135deg, #161b22, #1c2333);
+            border: 1px solid #30363d; border-radius: 12px; padding: 20px;
+        }
+        .pm-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+        .pm-stat { background: #0d1117; border-radius: 8px; padding: 10px; text-align: center; }
+        .pm-stat-val { font-size: 22px; font-weight: 700; }
+        .pm-stat-label { font-size: 10px; color: #8b949e; margin-top: 2px; }
+        .rec-item { font-size: 12px; padding: 6px 0; border-bottom: 1px solid #21262d; color: #8b949e; }
+        .rec-item:last-child { border-bottom: none; }
+        .rec-item::before { content: "→ "; color: #58a6ff; }
+
+        .loading { 
+            text-align: center; padding: 60px; color: #8b949e;
+            background: #161b22; border-radius: 12px; border: 1px dashed #30363d;
+        }
+        .loading-spinner { font-size: 32px; animation: spin 1s linear infinite; display: block; margin-bottom: 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .empty-state { text-align: center; padding: 60px; color: #8b949e; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <div>
+    <div class="header-left">
         <h1>🛡️ SRE Agent — Incident Command Center</h1>
-        <div style="font-size:12px; color:#8b949e; margin-top:4px;">Governed Multi-Agent Cloud Incident Triage System</div>
+        <p>Governed Multi-Agent Cloud Incident Triage System · Powered by Groq LLM</p>
     </div>
-    <div style="display:flex; align-items:center; gap:20px;">
-        <span><span class="status-dot"></span>System Operational</span>
-        <span style="font-size:12px; color:#8b949e;" id="last-run">Not run yet</span>
+    <div class="header-right">
+        <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span style="font-size:13px;">System Operational</span>
+        </div>
+        <span class="last-run" id="last-run">Not run yet</span>
     </div>
 </div>
 
-<div class="container">
-
-    <!-- Stats -->
-    <div class="stats" id="stats">
-        <div class="stat-card"><div class="label">Total Alerts</div><div class="value blue" id="stat-alerts">—</div></div>
-        <div class="stat-card"><div class="label">P1 Incidents</div><div class="value p1" id="stat-p1">—</div></div>
-        <div class="stat-card"><div class="label">Auto Remediated</div><div class="value p3" id="stat-auto">—</div></div>
-        <div class="stat-card"><div class="label">HITL Blocked</div><div class="value p2" id="stat-hitl">—</div></div>
+<div class="stats-grid">
+    <div class="stat-card blue">
+        <div class="stat-icon">📡</div>
+        <div class="stat-label">Total Alerts</div>
+        <div class="stat-value blue" id="stat-alerts">—</div>
     </div>
-
-    <!-- Controls -->
-    <div class="controls">
-        <button class="btn btn-primary" onclick="runPipeline()">▶ Run Full Pipeline</button>
-        <button class="btn btn-secondary" onclick="runTriage()">⚡ Triage Only</button>
-        <button class="btn btn-secondary" onclick="clearResults()">✕ Clear</button>
+    <div class="stat-card red">
+        <div class="stat-icon">🔴</div>
+        <div class="stat-label">P1 Incidents</div>
+        <div class="stat-value red" id="stat-p1">—</div>
     </div>
+    <div class="stat-card green">
+        <div class="stat-icon">✅</div>
+        <div class="stat-label">Auto Remediated</div>
+        <div class="stat-value green" id="stat-auto">—</div>
+    </div>
+    <div class="stat-card yellow">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-label">HITL Blocked</div>
+        <div class="stat-value yellow" id="stat-hitl">—</div>
+    </div>
+</div>
 
-    <!-- Custom Alert Injection -->
-    <div class="custom-form">
-        <div class="section-title">🧪 Custom Alert Injection — Test with your own alerts</div>
-        <div class="form-grid">
-            <input id="c-service" placeholder="Service (e.g. payment-api)" />
-            <input id="c-message" placeholder="Alert message" />
-            <input id="c-type" placeholder="Type (e.g. cpu_spike)" />
+<div class="controls">
+    <button class="btn btn-primary" onclick="runPipeline()">▶ Run Full Pipeline</button>
+    <button class="btn btn-secondary" onclick="runTriage()">⚡ Triage Only</button>
+    <button class="btn btn-secondary" onclick="clearResults()">✕ Clear</button>
+</div>
+
+<div class="inject-form">
+    <div class="inject-title">🧪 Custom Alert Injection — Test with your own alerts</div>
+    <div class="inject-grid">
+        <div>
+            <div class="input-label">Service Name</div>
+            <input id="c-service" placeholder="e.g. payment-api" />
+        </div>
+        <div>
+            <div class="input-label">Alert Message</div>
+            <input id="c-message" placeholder="e.g. CPU usage > 95%" />
+        </div>
+        <div>
+            <div class="input-label">Alert Type</div>
+            <input id="c-type" placeholder="e.g. cpu_spike" />
+        </div>
+        <div>
+            <div class="input-label">Severity</div>
             <select id="c-severity">
                 <option value="P1">P1 — Critical</option>
                 <option value="P2">P2 — High</option>
@@ -99,21 +228,47 @@
                 <option value="P4">P4 — Low</option>
             </select>
         </div>
-        <button class="btn btn-primary" style="margin-top:12px;" onclick="injectAlert()">Inject & Analyze</button>
+        <div>
+            <div class="input-label">&nbsp;</div>
+            <button class="btn btn-primary" onclick="injectAlert()">Inject & Analyze</button>
+        </div>
+    </div>
+</div>
+
+<div class="main-content">
+    <div>
+        <div class="section-title">📋 Incident Analysis</div>
+        <div id="results">
+            <div class="empty-state">
+                <div style="font-size:48px; margin-bottom:12px;">🔍</div>
+                <div style="font-size:16px; margin-bottom:8px;">No incidents analyzed yet</div>
+                <div style="font-size:13px;">Click "Run Full Pipeline" to start</div>
+            </div>
+        </div>
     </div>
 
-    <!-- Results -->
-    <div id="results">
-        <div class="loading">Click "Run Full Pipeline" to start incident analysis</div>
-    </div>
+    <div class="sidebar">
+        <div class="audit-card">
+            <div class="section-title">📟 AIMS Audit Log</div>
+            <div id="audit-log">
+                <div style="color:#8b949e; font-size:12px; text-align:center; padding:20px;">No events yet</div>
+            </div>
+        </div>
 
+        <div class="postmortem-card">
+            <div class="section-title">📄 Post-Mortem</div>
+            <div id="postmortem">
+                <div style="color:#8b949e; font-size:12px; text-align:center; padding:20px;">Run pipeline to generate report</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
     const API = 'http://localhost:8000';
 
     async function runPipeline() {
-        document.getElementById('results').innerHTML = '<div class="loading">🔄 Running agents... this takes 15-20 seconds</div>';
+        document.getElementById('results').innerHTML = '<div class="loading"><span class="loading-spinner">⚙️</span>Running AI agents... this takes 15-20 seconds</div>';
         try {
             const res = await fetch(`${API}/analyze`);
             const data = await res.json();
@@ -124,19 +279,22 @@
     }
 
     async function runTriage() {
-        document.getElementById('results').innerHTML = '<div class="loading">⚡ Running triage...</div>';
+        document.getElementById('results').innerHTML = '<div class="loading"><span class="loading-spinner">⚡</span>Running triage agent...</div>';
         try {
             const res = await fetch(`${API}/triage`);
             const data = await res.json();
-            let html = `<div class="section-title">Triage Results — ${data.incidents_identified} incidents from ${data.total_alerts} alerts</div>`;
+            let html = `<div style="margin-bottom:16px; color:#8b949e; font-size:13px;">${data.incidents_identified} incidents identified from ${data.total_alerts} alerts</div>`;
             data.incidents.forEach(i => {
-                html += `<div class="incident-card">
+                const bc = i.severity === 'P0' || i.severity === 'P1' ? 'badge-p1' : i.severity === 'P2' ? 'badge-p2' : 'badge-p3';
+                html += `<div class="incident-card ${i.severity.toLowerCase()}">
                     <div class="incident-header">
                         <span class="service-name">${i.service}</span>
-                        <span class="severity-badge ${badgeClass}">${r.severity}</span>${escalatedBadge}${historyBadge}${confidenceBadge}uvicorn main:app --reload --port 8000
+                        <div class="badges">
+                            <span class="badge ${bc}">${i.severity}</span>
+                            <span class="badge badge-info">${i.alert_count} alerts</span>
+                        </div>
                     </div>
-                    <div>Alerts grouped: ${i.alert_count} &nbsp;|&nbsp; IDs: ${i.alert_ids.join(', ')}</div>
-                    <div style="margin-top:8px; color:#8b949e; font-size:13px;">${i.messages.join(' • ')}</div>
+                    <div style="font-size:13px; color:#8b949e;">${i.messages.join(' · ')}</div>
                 </div>`;
             });
             document.getElementById('results').innerHTML = html;
@@ -150,8 +308,7 @@
         const message = document.getElementById('c-message').value || 'Custom alert';
         const type = document.getElementById('c-type').value || 'custom';
         const severity = document.getElementById('c-severity').value;
-
-        document.getElementById('results').innerHTML = '<div class="loading">🔄 Analyzing custom alert...</div>';
+        document.getElementById('results').innerHTML = '<div class="loading"><span class="loading-spinner">🧪</span>Analyzing custom alert...</div>';
         try {
             const res = await fetch(`${API}/analyze/custom`, {
                 method: 'POST',
@@ -167,70 +324,83 @@
 
     function renderResults(data) {
         document.getElementById('last-run').textContent = 'Last run: ' + new Date().toLocaleTimeString();
-
         const pm = data.post_mortem;
         document.getElementById('stat-alerts').textContent = pm.total_alerts;
         document.getElementById('stat-p1').textContent = pm.p1_count;
         document.getElementById('stat-auto').textContent = pm.auto_remediated;
         document.getElementById('stat-hitl').textContent = pm.hitl_blocked;
 
-        let html = `<div class="section-title">Incident Analysis — ${data.remediation_plan.length} incidents processed</div>`;
+        let html = `<div style="margin-bottom:16px; color:#8b949e; font-size:13px;">${data.remediation_plan.length} incidents processed · ${new Date().toLocaleString()}</div>`;
 
         data.remediation_plan.forEach(r => {
-           const badgeClass = r.severity === 'P0' ? 'badge-p1' : r.severity === 'P1' ? 'badge-p1' : r.severity === 'P2' ? 'badge-p2' : 'badge-p3';
-const escalatedBadge = r.escalated ? '<span class="tag" style="background:#3d1a1a; color:#f85149; margin-left:8px;">⚠️ ESCALATED P0</span>' : '';
-const historyBadge = `<span class="tag" style="margin-left:8px;">📊 ${r.total_historical_alerts || 0} total alerts</span>`;
-const confidenceBadge = r.confidence === 'LOW' ? '<span class="tag" style="background:#2d2208; color:#d29922; margin-left:8px;">⚠️ LOW CONFIDENCE</span>' : '';
-            html += `<div class="incident-card">
+            const sev = r.severity || 'P3';
+            const bc = sev === 'P0' || sev === 'P1' ? 'badge-p1' : sev === 'P2' ? 'badge-p2' : 'badge-p3';
+            const escalatedBadge = r.escalated ? '<span class="badge badge-escalated">⚠️ P0 ESCALATED</span>' : '';
+            const histBadge = r.total_historical_alerts ? `<span class="badge badge-info">📊 ${r.total_historical_alerts} historical</span>` : '';
+            const confBadge = r.confidence === 'LOW' ? '<span class="badge badge-warn">⚠️ LOW CONFIDENCE</span>' : '';
+            const isBlocked = r.hitl_status === 'BLOCKED_PENDING_APPROVAL';
+
+            html += `<div class="incident-card ${sev.toLowerCase()}">
                 <div class="incident-header">
                     <span class="service-name">${r.service}</span>
-                    <div>
-                        <span class="severity-badge ${badgeClass}">${r.severity}</span>
-                        <span class="tag" style="margin-left:8px;">Confidence: ${r.confidence}</span>
+                    <div class="badges">
+                        <span class="badge ${bc}">${sev}</span>
+                        ${escalatedBadge}
+                        ${histBadge}
+                        <span class="badge badge-info">Confidence: ${r.confidence}</span>
+                        ${confBadge}
                     </div>
                 </div>
                 <div class="incident-grid">
-                    <div class="field"><div class="field-label">Root Cause</div><div class="field-value">${r.root_cause}</div></div>
-                    <div class="field"><div class="field-label">Trigger</div><div class="field-value">${r.trigger}</div></div>
+                    <div class="field">
+                        <div class="field-label">🔍 Root Cause</div>
+                        <div class="field-value">${r.root_cause}</div>
+                    </div>
+                    <div class="field">
+                        <div class="field-label">⚡ Trigger</div>
+                        <div class="field-value">${r.trigger}</div>
+                    </div>
                 </div>
-                <div class="${r.hitl_status === 'BLOCKED_PENDING_APPROVAL' ? 'hitl-blocked' : 'hitl-safe'}" style="margin-top:12px;">
-                    ${r.hitl_status === 'BLOCKED_PENDING_APPROVAL' 
-                        ? `🔴 <strong>HITL GATE — Human Approval Required</strong><br><span style="font-size:13px; color:#f85149;">${r.dangerous_fix}</span>`
-                        : `🟢 <strong>Auto-Remediated</strong><br><span style="font-size:13px;">${r.safe_fix}</span>`
-                    }
+                <div class="${isBlocked ? 'hitl-blocked' : 'hitl-safe'}">
+                    <div class="hitl-title">${isBlocked ? '🔴 HITL GATE — Human Approval Required' : '🟢 Auto-Remediated'}</div>
+                    <div class="hitl-action">${isBlocked ? r.dangerous_fix : r.safe_fix}</div>
                 </div>
             </div>`;
         });
-
-        // Audit Log
-        html += `<div class="audit-log"><div class="section-title">📋 AIMS Audit Log</div>`;
-        data.audit_log.forEach(entry => {
-            html += `<div class="log-entry">
-                <span class="log-time">${entry.timestamp.split('T')[1].split('.')[0]}</span>
-                <span class="${entry.event.includes('BLOCKED') ? 'log-blocked' : 'log-event'}">${entry.event}</span>
-                <span>${entry.service} — ${entry.action}</span>
-            </div>`;
-        });
-        html += `</div>`;
-
-        // Post-mortem
-        html += `<div class="postmortem">
-            <div class="section-title">📄 Post-Mortem Report — ${pm.report_id}</div>
-            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:16px 0;">
-                <div class="field"><div class="field-label">Total Alerts</div><div class="field-value" style="font-size:24px; color:#58a6ff;">${pm.total_alerts}</div></div>
-                <div class="field"><div class="field-label">Auto Fixed</div><div class="field-value" style="font-size:24px; color:#3fb950;">${pm.auto_remediated}</div></div>
-                <div class="field"><div class="field-label">Needs Human</div><div class="field-value" style="font-size:24px; color:#f85149;">${pm.hitl_blocked}</div></div>
-            </div>
-            <div class="section-title" style="margin-top:16px;">Prevention Recommendations</div>
-            ${pm.prevention.map(r => `<div class="rec-item">${r}</div>`).join('')}
-        </div>`;
 
         document.getElementById('results').innerHTML = html;
+
+        // Audit log
+        let logHtml = '';
+        data.audit_log.forEach(e => {
+            const isBlocked = e.event.includes('BLOCKED');
+            logHtml += `<div class="log-entry">
+                <span class="log-time">${e.timestamp.split('T')[1].split('.')[0]}</span>
+                <span class="${isBlocked ? 'log-blocked' : 'log-auto'}"> ${e.event}</span>
+                <div class="log-service" style="margin-top:2px; padding-left:8px;">${e.service} — ${e.action.substring(0, 50)}${e.action.length > 50 ? '...' : ''}</div>
+            </div>`;
+        });
+        document.getElementById('audit-log').innerHTML = logHtml || '<div style="color:#8b949e; font-size:12px;">No events</div>';
+
+        // Post-mortem
+        document.getElementById('postmortem').innerHTML = `
+            <div style="font-size:11px; color:#8b949e; margin-bottom:8px;">${pm.report_id}</div>
+            <div class="pm-stats">
+                <div class="pm-stat"><div class="pm-stat-val" style="color:#58a6ff;">${pm.total_alerts}</div><div class="pm-stat-label">Alerts</div></div>
+                <div class="pm-stat"><div class="pm-stat-val" style="color:#3fb950;">${pm.auto_remediated}</div><div class="pm-stat-label">Auto Fixed</div></div>
+                <div class="pm-stat"><div class="pm-stat-val" style="color:#f85149;">${pm.hitl_blocked}</div><div class="pm-stat-label">Blocked</div></div>
+            </div>
+            <div style="font-size:12px; color:#8b949e; margin-bottom:8px; font-weight:600;">Prevention Recommendations</div>
+            ${pm.prevention.map(r => `<div class="rec-item">${r}</div>`).join('')}
+        `;
     }
 
     function clearResults() {
-        document.getElementById('results').innerHTML = '<div class="loading">Click "Run Full Pipeline" to start incident analysis</div>';
+        document.getElementById('results').innerHTML = '<div class="empty-state"><div style="font-size:48px; margin-bottom:12px;">🔍</div><div>No incidents analyzed yet</div></div>';
+        document.getElementById('audit-log').innerHTML = '<div style="color:#8b949e; font-size:12px; text-align:center; padding:20px;">No events yet</div>';
+        document.getElementById('postmortem').innerHTML = '<div style="color:#8b949e; font-size:12px; text-align:center; padding:20px;">Run pipeline to generate report</div>';
         ['stat-alerts','stat-p1','stat-auto','stat-hitl'].forEach(id => document.getElementById(id).textContent = '—');
+        document.getElementById('last-run').textContent = 'Not run yet';
     }
 </script>
 </body>
