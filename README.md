@@ -3,6 +3,10 @@
 > Built for HiDevs AI Quest: Beyond the Wrapper | PS-03 | Solo Submission
 
 A production-grade governed multi-agent SRE system that autonomously triages cloud incidents, diagnoses root causes using LLM reasoning, and executes safe remediations — with human approval gates for destructive actions.
+🌐 **Live Demo:** https://sre-agent-iuva.onrender.com/dashboard  
+📡 **API Docs:** https://sre-agent-iuva.onrender.com/docs  
+🔗 **GitHub:** https://github.com/Mahalakshmi2101/sre-agent
+
 
 ---
 
@@ -43,7 +47,7 @@ HITL Safety Gate
 ## 🧪 Custom Alert Injection
 
 ```bash
-curl -X POST "https://your-url/analyze/custom" \
+curl -X POST "https://sre-agent-iuva.onrender.com/analyze/custom" \
   -H "Content-Type: application/json" \
   -d '{"alerts": [{"service": "payment-api", "message": "CPU spike 98%", "type": "cpu_spike", "severity": "P1"}]}'
 ```
